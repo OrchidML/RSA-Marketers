@@ -2,75 +2,69 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# data directory
-DATA = '/home/harryj/Documents/RSA/Data/cripps20112014.csv'
+class Prediction:
 
-# Define sum weightings as constants
-lastValueW = 0.001913372
-Week1W = 0.0255509727
-Year1W = 0.00966464649
-Year2W = 0.007528915
-MAw = 0.883648789
-MALength = 52
+    def __init__(self, X, Y):
+        self.X = X
+        self.Y = Y
 
-# define prediction function
-def predict_single(X):
+        # data directory
+        self.DATA = '/home/ronald/data/cripps20112014.csv'
 
-    last_value = X - 1
-    MA_start = last_value - 52
-    MA_stop = MA_start + MALength
-    comp1week = X - 2
-    comp1year = X - 52
-    comp2year = X - 104
-    compMA = np.mean(df['value'][MA_start:last_value])
-    predicted = df['value'][last_value]*lastValueW + df['value'][comp1week]*Week1W + df['value'][comp1year]*Year1W + df['value'][comp2year]*Year2W + compMA * MAw
+        # Define sum weightings as constants
+        self.LastValueW = 0.071913372
+        self.Week1W = 0.0255509727
+        self.Year1W = 0.00966464649
+        self.Year2W = 0.007528915
+        self.MaW = 0.883648789
+        print 'Sum of weights is', self.LastValueW + self.Week1W + self.Year1W + self.Year2W + self.MaW
 
-    return predicted
+        # define moving average length
+        self.ma_length = 52
 
+        # import csv
+        self.df = pd.read_csv(self.DATA)
+        self.df['predictedvalue'] = np.nan
+        self.df['error'] = np.nan
 
-#function for full year of predictions, where X is start point of the array
-def predict_year(X):
+    # define prediction function
+    def predict(self):
 
-    predictions = 0
-    year_start = X - 52
-    new_point = X - 52
+        targetpos = self.X
 
-    # create prediction dataframe
-    columns = ['date', 'value']
-    index = range(51)
-    predict_array = pd.DataFrame(columns=columns, index=index)
+        while targetpos <= self.Y:
 
-    for x in range(0, 51):
+            actualvalue = self.df['value'][targetpos]
+            #print 'actual value for week', targetpos, 'is', actualvalue
+            lastvalue = targetpos - 1
+            ma_start = lastvalue - self.ma_length
+            comp1week = targetpos - 2
+            comp1year = targetpos - 52
+            comp2year = targetpos - 104
+            comp_ma = np.mean(self.df['value'][ma_start:lastvalue])
 
-        #define predicted value in a new array
-        predict_array['value'][predictions] = predict_single(new_point)
-        predict_array['date'][predictions] = df['date'][new_point]
+            predicted = self.df['value'][lastvalue] * self.LastValueW + self.df['value'][comp1week] * self.Week1W + self.df['value'][comp1year] * self.Year1W + self.df['value'][comp2year] * self.Year2W + comp_ma * self.MaW
+            #print 'predicted value for week', targetpos, 'is', predicted
 
-        predictions += 1
-        new_point += 1
+            self.df['predictedvalue'][targetpos] = predicted
 
-    return predict_array
+            self.error = abs((predicted - actualvalue)/(actualvalue))
+            #print 'error for week', targetpos, 'is', self.error, '\n'
 
+            self.df['error'][targetpos] = self.error
 
-#plot results
-def plot_array(array):
-
-    plt.plot(array.index, array['value'])
-    plt.xlabel('date')
-    plt.ylabel('value')
-    plt.title('RSA: Predicted Cripps Pink Apples against actual Cripps Pink Apples')
+            targetpos += 1
 
 
-# import csv
-df = pd.read_csv(DATA)
+        #print self.df['predictedvalue'][self.X:self.Y]
 
-#print predicted value for 209
-print predict_single(209)
+        return self.df[['predictedvalue','error', 'value']][self.X:self.Y]
 
-#print actual value at 209
-print df['value'][-1:].values
+p124 = Prediction(124,176)
+print p124.predict()
 
-#plot results
-plot_array(predict_year(209))
-plot_array(df[-52:])
-plt.show()
+#plt.plot(p124.predict().index, p124.predict()['value'], 'r-')
+#plt.plot(p124.predict().index, p124.predict()['predictedvalue'])
+#plt.plot(p124.predict().index, p124.predict()['error'])
+#plt.axis([p124.X, p124.Y, 3, 15])
+#plt.show()
